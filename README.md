@@ -21,12 +21,11 @@ then you can have this in JotNotes without ever leaving neovim.
 With Lazy
 ```lua
 {
-    'sheepy9/jotnotes.nvim'
+    'sheepy9/jotnotes.nvim',
     opts = {
         dir = "$HOME/Documents/jotnotes/",
         archive_scratch_on_clear = true
     }
-    end
 }
 ```
 
