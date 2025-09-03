@@ -1,0 +1,172 @@
+local M = {}
+
+local fsutil = require('jotnotes.fsutil')
+
+local function get_scratch_title()
+    return "# Scratch (from "..fsutil.generate_timestamp("%Y/%m/%d %H:%M:%S") .. ")\n\n"
+end
+
+--- Create homepage file and scratch buffer
+---@param directory string path to directory
+local function initialize_jotnotes_directory(directory)
+    local index_text = [[
+# JotNotes
+
+Welcome to jotnotes. This is the home page for your notes. You can use it as a
+wayfinder for your other notes, or place the most important stuff here, such as
+reminders, links to dailies, impartant todos or anything else you want quick
+access to.
+
+For example, my notes home page is full of "that's what she said" jokes, so that
+I can quickly use them to lighten the tension when things get sort of hard.
+                                                          ᵗʰᵃᵗ'ˢ ʷʰᵃᵗ ˢʰᵉ ˢᵃᶦᵈ
+]]
+
+    local scratch_text = get_scratch_title()
+
+    scratch_text = scratch_text..[[
+This is the scratchpad file. It can be used to jot down quick thoughts, to work
+out some problem by breaking it down and for other transient text. Scratch notes
+can be archived when cleared by simply specifying the option `archive_scratch_on_clear`
+in the plugin configuration.
+]]
+    fsutil.create_file_with_text(directory .. "index.md", index_text)
+    fsutil.create_file_with_text(directory .. "scratch.md", scratch_text)
+end
+
+--- Function to merge user options with default options
+---@param user_opts table user defined options
+---@return table merged table with user_opts priority
+local function merge_options(user_opts, default_opts)
+  local opts = vim.tbl_deep_extend("force", {}, default_opts, user_opts or {})
+  return opts
+end
+
+M.default_config = {
+    dir = "$HOME/Documents/jotnotes/",
+    archive_scratch_on_clear = true
+}
+
+M.config = {}
+
+--- Main plugin setup table
+---@param user_config table containing user configuration
+function M.setup(user_config)
+
+    if user_config == nil or type(next(user_config)) == "nil" then
+        M.config = M.default_config
+    else
+        M.config = merge_options(user_config, M.default_config)
+    end
+
+    M.config.dir = fsutil.expand_env_var(M.config.dir)
+
+    local directory_existed = fsutil.ensure_directory_exists(M.config.dir)
+    M.config.dir = fsutil.normalize_path(M.config.dir)
+    if not directory_existed then
+        vim.notify("Created jotnotes root directory at " .. M.config.dir, vim.log.levels.INFO)
+        initialize_jotnotes_directory(M.config.dir)
+    end
+
+    M.create_user_commands()
+    M.setupDefaultKeymap()
+end
+
+function M.findJotNote()
+    require('telescope.builtin').find_files({
+        prompt_title = "Search Notes in " .. M.config.dir,
+        cwd = M.config.dir,
+        hidden = true
+    })
+end
+
+function M.grepJotNote()
+    require('telescope.builtin').live_grep({
+        prompt_title = "Search Text in " .. M.config.dir,
+        cwd = M.config.dir,
+        hidden = true
+    })
+end
+
+function M.createJotNote(filename)
+    local note_name = filename
+    if not fsutil.match_file_extension(filename, "md") then
+        note_name = filename .. ".md"
+    end
+    if not fsutil.file_exists(M.config.dir .. note_name) then
+        fsutil.create_file_with_text(M.config.dir .. note_name, "# " .. note_name)
+    end
+    vim.cmd('edit ' .. M.config.dir .. note_name)
+end
+
+function M.create_user_commands()
+    vim.api.nvim_create_user_command('JotSearch',
+        function()
+            M.findJotNote()
+        end,
+        {})
+    vim.api.nvim_create_user_command('JotGrep',
+        function()
+            M.grepJotNote()
+        end,
+        {})
+
+    vim.api.nvim_create_user_command('JotNew',
+        function(opts)
+            M.createJotNote(opts.args)
+        end,
+        {
+            nargs = 1,
+            complete = fsutil.file_completion(M.config.dir), -- returns function
+        })
+
+    vim.api.nvim_create_user_command('JotToday',
+        function()
+            local dailies_path = M.config.dir.."dailies/"
+            fsutil.ensure_directory_exists(dailies_path)
+            M.createJotNote("dailies/"..fsutil.generate_timestamp("%Y-%m-%d-%a"))
+        end,
+        {})
+
+    vim.api.nvim_create_user_command('JotScratch',
+        function()
+            local scratch_path = M.config.dir.."scratch.md"
+            M.createJotNote("scratch.md")
+        end,
+        {})
+
+    vim.api.nvim_create_user_command('JotScratchNew',
+        function()
+            if M.config.archive_scratch_on_clear then
+                local archived_path = M.config.dir.."archive/"
+                local archived_filename = archived_path..fsutil.generate_timestamp("%Y%m%d%H%M%S").."-scratch.md"
+                fsutil.ensure_directory_exists(archived_path)
+                fsutil.copy_file(M.config.dir.."scratch.md", archived_filename)
+                vim.notify("Scratch file archived to "..archived_filename, vim.log.levels.INFO)
+            end
+            local scratch_path = M.config.dir.."scratch.md"
+            fsutil.create_file_with_text(scratch_path, get_scratch_title())
+            -- reopen note
+            vim.cmd('edit ' .. scratch_path)
+        end,
+        {})
+end
+
+function M.setupDefaultKeymap()
+    vim.keymap.set('n', '<leader>Jf', "<cmd>JotSearch<cr>", { desc = 'Find jot note' })
+    vim.keymap.set('n', '<leader>Jt', "<cmd>JotGrep<cr>", { desc = 'Search text in jot notes' })
+    vim.keymap.set('n', '<leader>Jn',
+        function()
+            local filename = vim.fn.input("Enter filename: ")
+            if filename == "" then
+                filename = fsutil.generate_timestamp().."-note"
+            end
+            M.createJotNote(filename)
+        end, { desc = 'Create new note' })
+    vim.keymap.set('n', '<leader>Jd', "<cmd>JotToday<cr>", { desc = 'Go to (or create) daily note' })
+    vim.keymap.set('n', '<leader>Js', "<cmd>JotScratch<cr>", { desc = 'Go to scratchpad' })
+    vim.keymap.set('n', '<leader>JS', "<cmd>JotScratchNew<cr>", { desc = 'Go to scratchpad' })
+end
+
+
+return M
