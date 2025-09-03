@@ -23,7 +23,7 @@ With Lazy
 {
     'sheepy9/jotnotes.nvim'
     opts = {
-        dir = "$HOME/",
+        dir = "$HOME/Documents/jotnotes/",
         archive_scratch_on_clear = true
     }
     end
