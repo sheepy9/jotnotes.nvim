@@ -221,8 +221,8 @@ function M.createUserCommands()
             local scratch_path = M.config.dir .. "scratch.md"
             fsutil.create_file_with_text(scratch_path, get_scratch_title())
             -- reopen note
-            vim.api.command('edit ' .. scratch_path)
-            lastFunction = function() vim.api.command('edit ' .. scratch_path) end
+            vim.api.nvim_command('edit ' .. scratch_path)
+            lastFunction = function() vim.api.nvim_command('edit ' .. scratch_path) end
         end,
         {})
 
