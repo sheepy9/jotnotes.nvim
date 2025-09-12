@@ -92,7 +92,7 @@ function M.copy_file(from_path, to_path)
     -- Copy (synchronous). Returns true on success, or nil + error message.
     local ok, err = uv.fs_copyfile(from_path, to_path)
     if not ok then
-        vim.notify("File copy failed from "..from_path.." to "..to_path, vim.log.levels.ERROR)
+        vim.notify("[JotNotes] | File copy failed from "..from_path.." to "..to_path, vim.log.levels.ERROR)
     end
 end
 
