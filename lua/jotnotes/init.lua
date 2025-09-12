@@ -119,6 +119,7 @@ function M.findJotNote()
             map('i', '<C-v>', function()
                 local selection = action_state.get_selected_entry()
                 actions.close(prompt_bufnr)
+                winutil.open_vertical_split(selection.path, M.config.split_opts)
 
                 lastFunction = function()
                     winutil.open_vertical_split(selection.path, M.config.split_opts)
