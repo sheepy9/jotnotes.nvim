@@ -39,6 +39,7 @@ The plugin defines the following user commands that you can call directly
 - `JotToday` - opens (or creates) the daily note for today
 - `JotScratch` - opens the current scratchpad file
 - `JotScratchNew` - clears (or archives) the current scratchpad file and creates a new one
+- `JotLastNote` - opens last opened note in split or floating window
 
 ## Default Keybindings
 
@@ -57,7 +58,8 @@ By default, JotNotes creates the following keybindings for the UserCommands
         end, { desc = 'Create new note' })
     vim.keymap.set('n', '<leader>Jd', "<cmd>JotToday<cr>", { desc = 'Go to (or create) daily note' })
     vim.keymap.set('n', '<leader>Js', "<cmd>JotScratch<cr>", { desc = 'Go to scratchpad' })
-    vim.keymap.set('n', '<leader>JS', "<cmd>JotScratchNew<cr>", { desc = 'Go to scratchpad' })
+    vim.keymap.set('n', '<leader>JS', "<cmd>JotScratchNew<cr>", { desc = 'Create new scratchpad' })
+    vim.keymap.set('n', '<leader>Jl', "<cmd>JotLastNote<cr>", { desc = 'Open most recent note' })
 ```
 
 ## Misc
